@@ -11,7 +11,7 @@
  * See http://www.loc.gov/marc/bibliographic/ecbdhome.html
  * See http://www.loc.gov/z3950/lcserver.html
  */
-define('YAZ_DEFAULT_OPTON', '1.2.840.10003.5.10');
+define('YAZ_DEFAULT_SYNTAX', '1.2.840.10003.5.10');
 define('YAZ_DEFAULT_SERVER', 'z3950.loc.gov:7090/Voyager'); // jenson.stanford.edu:2210/unicorn
 
 /**
@@ -19,22 +19,17 @@ define('YAZ_DEFAULT_SERVER', 'z3950.loc.gov:7090/Voyager'); // jenson.stanford.e
  */
 function z3950_menu($may_cache = true) {
   $items = array();
-  if ($may_cache) {
-    $items[] = array(
-      'path' => 'z3950',
-      'access' => user_access('search in z3950 servers'),
-      'type' => MENU_HIDDEN_ITEM,
-      'callback' => 'z3950_get'
-    );
-    $items[] = array(
-      'path' => 'admin/settings/z3950',
-      'title' => t('z3950'),
-      'description' => t('Set z3950 configuration options'),
-      'callback' => 'drupal_get_form',
-      'callback arguments' => 'z3950_admin_settings',
-      'access' => user_access('administer site configuration'),
-    );
-  }
+  $items['z3950'] = array(
+    'access' => 'search in z3950 servers',
+    'page callback' => 'z3950_get'
+  );
+  $items['admin/settings/z3950'] = array(
+    'title' => 'z3950',
+    'description' => 'Set z3950 configuration options',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => 'z3950_admin_settings',
+    'access arguments' => array('administer site configuration'),
+  );
   return $items;
 }
 
@@ -289,8 +284,8 @@ function _z3950_search($keys) {
               }
             }
           }
+          return $find;
         }
-        return $find;
       }
     }
   }
@@ -300,7 +295,7 @@ function _z3950_search($keys) {
 /**
  * Implementation of hook_form_alter().
  */
-function z3950_form_alter($form_id, &$form) {
+function z3950_form_alter(&$form, $form_state, $form_id) {
   // alter the z39.50 search form
   if ($form_id == 'search_form' && arg(1) == 'z3950') {
     // get list of available servers
@@ -323,7 +318,7 @@ function z3950_form_alter($form_id, &$form) {
     }
 
     // add checkboxes for available servers to the basic form
-    if (count($servers) > 1) {
+    if (count($options) > 1) {
       $form['basic']['server'] = array(
         '#type' => 'checkboxes',
         '#options' => $options,
@@ -338,7 +333,7 @@ function z3950_form_alter($form_id, &$form) {
     // @TODO
 
     // add validate hook to process these new form elements
-    $form['#validate']['z3950_search_validate'] = array();
+    $form['#validate'][] = 'z3950_search_validate';
   }
 }
 
@@ -348,11 +343,11 @@ function z3950_form_alter($form_id, &$form) {
  * hook_form_validate() is used solely to set the 'processed_keys' form
  * value for the basic search form.
  */
-function z3950_search_validate($form_id, $form_values, $form) {
-  if (count($form['#post']['server'])) {
-    $keys  = $form_values['processed_keys'];
-    $keys .= ' server:'. implode(',', $form['#post']['server']);
-    form_set_value($form['basic']['inline']['processed_keys'], $keys);
+function z3950_search_validate($form, &$form_state) {
+  if (isset($form_state['values']['server'])) {
+    $keys  = $form_state['values']['processed_keys'];
+    $keys .= ' server:'. implode(',', $form_state['values']['server']);
+    form_set_value($form['basic']['inline']['processed_keys'], $keys, $form_state);
   }
 }
 
@@ -406,6 +401,13 @@ function _z3950_get_servers() {
     return preg_replace('/^\s+|\s+$/', '', split("/\r\n|\n|\r/", $servers));
   }
   drupal_set_message(t('No servers defined in the <a href="@url">settings</a>', array('@url' => url('admin/settings/z3950'))), 'error');
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function z3950_theme() {
+  return array('yaz_record' => array());
 }
 
 /**

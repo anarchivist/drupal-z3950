@@ -34,7 +34,6 @@ function _z3950_marc21_summary($id, $pos) {
   else {
     return array(
       'type' => t('metadata'),
-      'link' => url('z3950/'. $server_index .'/'. $pos .'/'. $keys),
       'title' => $rec_array[4][1],
       'snippet' => $rec_array[10][1],
       'extra' => array(
