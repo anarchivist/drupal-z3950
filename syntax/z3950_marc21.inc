@@ -21,35 +21,55 @@ function z3950_marc21($op, $id = NULL, $pos = NULL) {
 }
 
 function _z3950_marc21_summary($id, $pos) {
-  $rec_array = yaz_record($id, $pos, 'array');
-  if (is_null($rec_array)) {
-    $rec_string = yaz_record($id, $pos, 'string');
-    if (!empty($rec_string)) {
-      return array(
-        'type' => t('metadata'),
-        'title' => $rec_string,
-      );
+  $marc_array = _z3950_marc21_record($id, $pos);
+
+  // start the summary return array
+  $summary = array('type' => t('metadata'), 'extra' => array());
+
+  // add title
+  if (isset($marc_array['3,245'])) {
+    $summary['title'] = implode(' ', array_pop($marc_array['3,245']));
+  }
+
+  // add snippet
+  $snippet = array();
+  foreach (array('3,100', '3,260', '3,300') as $key) {
+    if (isset($marc_array[$key])) {
+      $snippet[] = implode(' ', array_pop($marc_array[$key]));
     }
   }
-  else {
-    return array(
-      'type' => t('metadata'),
-      'title' => $rec_array[4][1],
-      'snippet' => $rec_array[10][1],
-      'extra' => array(
-        'time_period' => $rec_array[13][1],
-      ),
-    );
-  }
+  $summary['snippet'] = implode(' ', $snippet);
+
+  return $summary;
 }
 
 function _z3950_marc21_detail($id, $pos) {
   // set page title
-  $rec_array = yaz_record($id, $pos, 'array');
-  if (!is_null($rec_array)) {
-    drupal_set_title($rec_array[4][1]);
+  $marc_array = _z3950_marc21_record($id, $pos);
+
+  // set the title
+  if (isset($marc_array['3,245'])) {
+    drupal_set_title(implode(' ', array_pop($marc_array['3,245'])));
   }
 
   // return page text
+  // @TODO: format a better page for display
   return yaz_record($id, $pos, 'string');
+}
+
+function _z3950_marc21_record($id, $pos) {
+  $marc_array = array();
+  foreach (yaz_record($id, $pos, 'array') as $yaz_element) {
+    if (isset($yaz_element[1])) {
+      // strip all non-essential chars from the key, to insure a safe eval() below
+      $key = preg_replace('/[^0-9a-z,@\(\)]/', '', $yaz_element[0]);
+
+      // convert the parenthesis's into array brackets, and quote the array elements
+      $key = str_replace(array('(', ')'), array("['", "']"), $key);
+
+      // store the value in the multidimensional array
+      eval('$marc_array'. $key .' = $yaz_element[1];');
+    }
+  }
+  return $marc_array;
 }
