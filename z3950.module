@@ -27,7 +27,7 @@ function z3950_menu($may_cache = true) {
     'title' => 'z3950',
     'description' => 'Set z3950 configuration options',
     'page callback' => 'drupal_get_form',
-    'page arguments' => 'z3950_admin_settings',
+    'page arguments' => array('z3950_admin_settings'),
     'access arguments' => array('administer site configuration'),
   );
   return $items;
