@@ -379,7 +379,7 @@ function z3950_get() {
         if (empty($error)) {
           // display the page results based on the z39.50 syntax
           if ($syntax = _z3950_get_syntax($id, $pos)) {
-            if ($record = call_user_func($syntax['function'], 'details', $id, $pos)) {
+            if ($record = call_user_func($syntax['function'], 'detail', $id, $pos)) {
               return theme('yaz_record', $record);
             }
           }

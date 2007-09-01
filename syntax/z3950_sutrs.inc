@@ -15,8 +15,8 @@ function z3950_sutrs($op, $id = NULL, $pos = NULL) {
     case 'summary':
       return _z3950_sutrs_summary($id, $pos);
 
-    case 'details':
-      return _z3950_sutrs_details($id, $pos);
+    case 'detail':
+      return _z3950_sutrs_detail($id, $pos);
   }
 }
 
@@ -30,7 +30,7 @@ function _z3950_sutrs_summary($id, $pos) {
   }
 }
 
-function _z3950_sutrs_details($id, $pos) {
+function _z3950_sutrs_detail($id, $pos) {
   // set page title
   drupal_set_title(t('Metadata Contents'));
 

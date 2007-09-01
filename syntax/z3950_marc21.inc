@@ -15,8 +15,8 @@ function z3950_marc21($op, $id = NULL, $pos = NULL) {
     case 'summary':
       return _z3950_marc21_summary($id, $pos);
 
-    case 'details':
-      return _z3950_marc21_details($id, $pos);
+    case 'detail':
+      return _z3950_marc21_detail($id, $pos);
   }
 }
 
@@ -43,7 +43,7 @@ function _z3950_marc21_summary($id, $pos) {
   }
 }
 
-function _z3950_marc21_details($id, $pos) {
+function _z3950_marc21_detail($id, $pos) {
   // set page title
   $rec_array = yaz_record($id, $pos, 'array');
   if (!is_null($rec_array)) {
