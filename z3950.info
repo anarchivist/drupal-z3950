@@ -1,0 +1,3 @@
+; $Id$
+name = z3950 Search
+description = Lets users search metadata in z39.50 YAZ compliant servers.

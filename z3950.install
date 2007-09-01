@@ -1,0 +1,18 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_install().
+ */
+function z3950_install() {
+  require_once(dirname(__FILE__) .'/z3950.module');
+  _z3950_install_check();
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function z3950_uninstall() {
+  variable_del('z3950_zurls');
+  variable_del('z3950_syntax');
+}
