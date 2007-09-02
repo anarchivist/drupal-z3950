@@ -161,6 +161,10 @@ function _z3950_search($keys) {
       'au'  => '1=1', // author
     );
 
+    // replace the Drupal keys types with the equivalent CCL command
+    $keys = preg_replace('/(au|author):/', 'au=', $keys);
+    $keys = preg_replace('/(ti|title):/', 'ti=', $keys);
+
     // setup the YAZ search on each server
     $ids = array();
     foreach ($servers as $server_index => $server) {
@@ -204,12 +208,13 @@ function _z3950_search($keys) {
           // check for error and get number of 'hits' (results) from this server
           $error = yaz_error($id);
           if (empty($error)) {
-            $server_hits[$server_index] = yaz_hits($id);
+            $hits = yaz_hits($id);
 
             // if this server has any results
-            if (!empty($server_hits[$server_index])) {
+            if (!empty($hits)) {
               // keep track of total number of hits, for use in the pager
-              $total_hits += $server_hits[$server_index];
+              $server_hits[$server_index] = $hits;
+              $total_hits += $hits;
 
               // set the starting position
               $server_pos[$server_index] = 1;
@@ -237,10 +242,15 @@ function _z3950_search($keys) {
           $total_pos = pager_init(10, 0, $total_hits);
           $total_per_server = $total_pos / count($ids);
 
+          // display total matches when there are more than fit on one page
+          if ($total_hits > 10) {
+            drupal_set_message(t('%hits matches found', array('%hits' => $total_hits)));
+          }
+
           // initialize the current position in each server
           // @TODO: there's a faster way to do this, this is just the easy way!
           // @TODO: test this around the edge cases, is it losing any results?
-          while ($total_pos > 1) {
+          while ($total_pos > 0) {
             foreach ($ids as $server_index => $id) {
               if ($server_pos[$server_index] < $server_hits[$server_index]) {
                 $server_pos[$server_index] ++;
@@ -252,12 +262,17 @@ function _z3950_search($keys) {
           // process results from search server, evenly mixing results from each server
           $limit = min($total_hits, 10);
           $find = array();
-          while (count($find) <= $limit) {
+          while (count($find) < $limit && count($server_hits) > 0) {
             foreach ($ids as $server_index => $id) {
               // loop through the results from this server
-              if ($server_pos[$server_index] < $server_hits[$server_index]) {
+              if (!empty($server_hits[$server_index])) {
                 // store the position in a scalar variable to make code easier to read
-                $pos = $server_pos[$server_index];
+                $pos = $server_pos[$server_index] ++;
+
+                // when all records from this server are retrieved, remove it from the array
+                if ($pos >= $server_hits[$server_index]) {
+                  unset($server_hits[$server_index]);
+                }
 
                 // store the database name for use in the source string below
                 $rec_database = yaz_record($id, $pos, 'database');
@@ -279,7 +294,6 @@ function _z3950_search($keys) {
 
                   // save this summary, and don't process it again
                   $find[] = $summary;
-                  $server_pos[$server_index] ++;
                 }
               }
             }
@@ -290,7 +304,6 @@ function _z3950_search($keys) {
     }
   }
 }
-
 
 /**
  * Implementation of hook_form_alter().
@@ -303,8 +316,8 @@ function z3950_form_alter(&$form, $form_state, $form_id) {
     $default_values = array_keys($options);
 
     // if search keys have already been used, parse them into form elements
-    $keys = $form['basic']['inline']['keys']['#default_value'];
-    if (preg_match('/(.*)server:(.*)/', $keys, $match)) {
+    $keys = isset($form_state['post']['keys']) ? $form_state['post']['keys'] : $form['basic']['inline']['keys']['#default_value'];
+    if (isset($keys) && preg_match('/(.*)server:(.*)/', $keys, $match)) {
       // replace the keys (which was keys and server) with just the keys
       $form['basic']['inline']['keys']['#default_value'] = $match[1];
 
@@ -327,7 +340,7 @@ function z3950_form_alter(&$form, $form_state, $form_id) {
     }
 
     // add help text to the basic form
-    $form['basic']['#description'] = t('enter the z39.50 search query (<A HREF="@url">see also</A>) and select the servers to search', array('@url' => 'http://www.indexdata.dk/yaz/doc/tools.tkl#CCL'));
+    $form['basic']['#description'] = t('enter the z39.50 search query.  You may use the CCL qualifiers au (or author) and ti (or title).  For example, <i>author:buber, martin</i> or <i>au:buber and ti:thou</i> are valid searches (<A HREF="@url">see also</A>).', array('@url' => 'http://www.indexdata.dk/yaz/doc/tools.tkl#CCL'));
 
     // add advanced form
     // @TODO
